@@ -7,8 +7,8 @@ jobs:
   train:
     runs-on: ubuntu-latest
     env:
-      AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-      AZURE_WORKSPACE_NAME: ${{ secrets.AZURE_WORKSPACE_NAME }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_WORKSPACE_NAME: ${{ vars.AZURE_WORKSPACE_NAME }}
     steps:
     - name: Check out repo
       uses: actions/checkout@main
