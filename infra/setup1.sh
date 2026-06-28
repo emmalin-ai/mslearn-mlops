@@ -52,3 +52,7 @@ az ml data create --type uri_folder --name "diabetes-dev-folder" --path ../exper
 az ml data create --type uri_folder --name "diabetes-prod-folder" --path ../production/data --resource-group "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME"
 # az ml data create --type uri_folder --name "diabetes-dev-folder" --path ../experimentation/data --resource-group "rg-ai300-l63026908" --workspace-name "mlw-ai300-l63026908"
 # az ml data create --type uri_folder --name "diabetes-prod-folder" --path ../production/data --resource-group "rg-ai300-l63026908" --workspace-name "mlw-ai300-l63026908"
+az ml online-endpoint show \
+  --name diabetes-endpoint \
+  --resource-group "rg-ai300-l63026908" \
+  --workspace-name "mlw-ai300-l63026908"
