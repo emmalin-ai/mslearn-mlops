@@ -1,4 +1,5 @@
-#! /usr/bin/sh
+#!/usr/bin/env bash
+set -e
 
 # Check if a suffix was passed as an argument
 if [[ -n "$1" ]]; then
@@ -15,7 +16,8 @@ echo "Suffix: $suffix"
 # Set the necessary variables
 RESOURCE_GROUP="rg-ai300-l${suffix}"
 RESOURCE_PROVIDER="Microsoft.MachineLearningServices"
-REGIONS=("eastus" "westus" "centralus" "northeurope" "westeurope")
+# REGIONS=("eastus" "westus" "centralus" "northeurope" "westeurope")
+REGIONS=("eastus")
 RANDOM_REGION=${REGIONS[$RANDOM % ${#REGIONS[@]}]}
 WORKSPACE_NAME="mlw-ai300-l${suffix}"
 COMPUTE_INSTANCE="ci${suffix}"
@@ -31,18 +33,22 @@ az group create --name $RESOURCE_GROUP --location $RANDOM_REGION
 az configure --defaults group=$RESOURCE_GROUP
 
 echo "Create an Azure Machine Learning workspace:"
-az ml workspace create --name $WORKSPACE_NAME 
+az ml workspace create --name "$WORKSPACE_NAME" --resource-group "$RESOURCE_GROUP" --location "$RANDOM_REGION"
 az configure --defaults workspace=$WORKSPACE_NAME 
 
 # Create compute instance
 echo "Creating a compute instance with name: " $COMPUTE_INSTANCE
-az ml compute create --name ${COMPUTE_INSTANCE} --size STANDARD_DS11_V2 --type ComputeInstance 
+az ml compute create --name "${COMPUTE_INSTANCE}" --size STANDARD_DS11_V2 --type ComputeInstance --resource-group "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME"
 
 # Create compute cluster
 echo "Creating a compute cluster with name: " $COMPUTE_CLUSTER
-az ml compute create --name ${COMPUTE_CLUSTER} --size STANDARD_DS11_V2 --max-instances 2 --type AmlCompute 
+az ml compute create --name "${COMPUTE_CLUSTER}" --size STANDARD_DS11_V2 --max-instances 2 --type AmlCompute --resource-group "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME"
 
 # Create data assets
 echo "Create training data asset:"
-az ml data create --type mltable --name "diabetes-training" --path ../data/diabetes-data
-az ml data create --type uri_file --name "diabetes-data" --path ../data/diabetes-data/diabetes.csv 
+az ml data create --type mltable --name "diabetes-training" --path ../data/diabetes-data --resource-group "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME"
+az ml data create --type uri_file --name "diabetes-data" --path ../data/diabetes-data/diabetes.csv --resource-group "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME"
+az ml data create --type uri_folder --name "diabetes-dev-folder" --path ../experimentation/data --resource-group "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME"
+az ml data create --type uri_folder --name "diabetes-prod-folder" --path ../production/data --resource-group "$RESOURCE_GROUP" --workspace-name "$WORKSPACE_NAME"
+# az ml data create --type uri_folder --name "diabetes-dev-folder" --path ../experimentation/data --resource-group "rg-ai300-l63026908" --workspace-name "mlw-ai300-l63026908"
+# az ml data create --type uri_folder --name "diabetes-prod-folder" --path ../production/data --resource-group "rg-ai300-l63026908" --workspace-name "mlw-ai300-l63026908"
