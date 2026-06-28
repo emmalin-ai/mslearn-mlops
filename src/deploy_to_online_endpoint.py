@@ -2,6 +2,7 @@ from azure.identity import DefaultAzureCredential
 from azure.ai.ml import MLClient
 from azure.ai.ml.entities import ManagedOnlineEndpoint, ManagedOnlineDeployment, Model
 from azure.ai.ml.constants import AssetTypes
+from azure.core.exceptions import ResourceNotFoundError
 
 import argparse
 import datetime
@@ -32,8 +33,23 @@ def get_ml_client(subscription_id: str, resource_group: str, workspace: str) -> 
 def ensure_endpoint(ml_client: MLClient, endpoint_name: str) -> ManagedOnlineEndpoint:
     try:
         endpoint = ml_client.online_endpoints.get(name=endpoint_name)
+        state = getattr(endpoint, "provisioning_state", None)
+        if state and state.lower() not in {"succeeded", "creating", "updating", "healthy"}:
+            print(f"Endpoint '{endpoint_name}' is in provisioning state '{state}'. Recreating...")
+            try:
+                ml_client.online_endpoints.begin_delete(name=endpoint_name).result()
+            except Exception as delete_error:
+                print(f"Warning: failed to delete endpoint before recreate: {delete_error}")
+            unique_suffix = datetime.datetime.now().strftime("%m%d%H%M%f")
+            name = endpoint_name or f"endpoint-{unique_suffix}"
+            endpoint = ManagedOnlineEndpoint(
+                name=name,
+                description="Online endpoint for MLflow diabetes model",
+                auth_mode="key",
+            )
+            return ml_client.begin_create_or_update(endpoint).result()
         return endpoint
-    except Exception:
+    except ResourceNotFoundError:
         unique_suffix = datetime.datetime.now().strftime("%m%d%H%M%f")
         name = endpoint_name or f"endpoint-{unique_suffix}"
 
@@ -44,6 +60,9 @@ def ensure_endpoint(ml_client: MLClient, endpoint_name: str) -> ManagedOnlineEnd
         )
 
         return ml_client.begin_create_or_update(endpoint).result()
+    except Exception as ex:
+        print(f"Failed to get or recreate endpoint '{endpoint_name}': {ex}")
+        raise
 
 
 def create_or_update_deployment(
